@@ -1,6 +1,15 @@
 import React, { useState } from "react";
 import socket from "../utils/socket";
 
+// Speech helper
+function speak(text) {
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.rate = 1;
+  msg.pitch = 1;
+  msg.volume = 1;
+  window.speechSynthesis.speak(msg);
+}
+
 export default function CameraTile({ id, frame }) {
   const [open, setOpen] = useState(false);
 
@@ -41,7 +50,15 @@ export default function CameraTile({ id, frame }) {
         <div>{frame?.anomaly ? <span className="badge">ANOMALY</span> : <span style={{ color: 'var(--muted)' }}>OK</span>}</div>
       </div>
 
-      <div className="camera-thumb" onClick={() => setOpen(true)} role="button" tabIndex={0}>
+      <div
+        className="camera-thumb"
+        onClick={() => {
+          setOpen(true);
+          speak(`Checking Feed ${id}`);
+        }}
+        role="button"
+        tabIndex={0}
+      >
         {videoSrc ? (
           <video
             src={videoSrc}
