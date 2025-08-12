@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import socket from "../utils/socket";
 
+// Get backend URL from environment variables (fallback to localhost for dev)
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 // Speech helper
 function speak(text) {
   const msg = new SpeechSynthesisUtterance(text);
@@ -16,7 +19,7 @@ export default function CameraTile({ id, frame }) {
   const svgString = `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'><rect width='100%' height='100%' fill='#02111e'/><text x='50%' y='50%' fill='#66fff0' font-size='22' font-family='Orbitron' text-anchor='middle'>FEED ${id} — WAIT</text></svg>`;
   const placeholder = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
 
-  // map feed IDs to local videos (place videos in /public/videos)
+  // Map feed IDs to local videos (place videos in /public/videos)
   const videoMap = {
     1: "/videos/camera1.mp4",
     2: "/videos/camera2.mp4",
@@ -68,7 +71,11 @@ export default function CameraTile({ id, frame }) {
             muted
           />
         ) : (
-          <img src={frame?.dataURL || placeholder} alt={`feed-${id}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} />
+          <img
+            src={frame?.dataURL || placeholder}
+            alt={`feed-${id}`}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }}
+          />
         )}
       </div>
 
@@ -85,7 +92,11 @@ export default function CameraTile({ id, frame }) {
                 controls
               />
             ) : (
-              <img src={frame?.dataURL || placeholder} alt="frame" style={{ width: '100%', borderRadius: 6, marginTop: 8 }} />
+              <img
+                src={frame?.dataURL || placeholder}
+                alt="frame"
+                style={{ width: '100%', borderRadius: 6, marginTop: 8 }}
+              />
             )}
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>

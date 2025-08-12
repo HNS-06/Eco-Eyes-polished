@@ -1,5 +1,8 @@
 import React, { useEffect, useRef } from "react";
 
+// Get backend URL from environment variables (for future API calls if needed)
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 // Speech helper
 function speak(text) {
   const msg = new SpeechSynthesisUtterance(text);
