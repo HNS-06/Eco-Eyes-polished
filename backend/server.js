@@ -9,9 +9,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve backend API routes
 const api = require('./routes/api');
 app.use('/api', api);
 
+// Serve frontend build as static files
+const frontendBuildPath = path.join(__dirname, '../frontend/build');
+app.use(express.static(frontendBuildPath));
+
+// Fallback for SPA routes: serve index.html
+app.get('*', (req, res) => {
+  // If the request starts with /api, skip SPA fallback
+  if (req.path.startsWith('/api')) return res.status(404).send('API route not found');
+  res.sendFile(path.join(frontendBuildPath, 'index.html'));
+});
+
+// Setup HTTP server + Socket.IO
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
@@ -95,5 +108,3 @@ server.listen(config.PORT, () => {
   console.log(`Echo Eyes backend listening on :${config.PORT} (USE_DB=${config.USE_DB})`);
   startEmission();
 });
-
-app.get('/', (req, res) => res.send('Echo Eyes backend running'));
