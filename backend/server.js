@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -9,32 +10,50 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve backend API routes
+// --------------------
+// Backend API Routes
+// --------------------
 const api = require('./routes/api');
 app.use('/api', api);
 
-// Serve frontend build as static files
+// --------------------
+// Frontend Static Serving (optional, if build exists)
+// --------------------
 const frontendBuildPath = path.join(__dirname, '../frontend/build');
 app.use(express.static(frontendBuildPath));
 
-// Fallback for SPA routes: serve index.html
 app.get('*', (req, res) => {
-  // If the request starts with /api, skip SPA fallback
   if (req.path.startsWith('/api')) return res.status(404).send('API route not found');
-  res.sendFile(path.join(frontendBuildPath, 'index.html'));
+  const indexFile = path.join(frontendBuildPath, 'index.html');
+  res.sendFile(indexFile, (err) => {
+    if (err) res.status(500).send('Error loading frontend');
+  });
 });
 
-// Setup HTTP server + Socket.IO
+// --------------------
+// HTTP + Socket.IO Setup
+// --------------------
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
+// --------------------
+// Data
+// --------------------
 const dataDir = path.join(__dirname, 'data');
 const feedsList = require(path.join(dataDir, 'feeds.json'));
 const eventsList = require(path.join(dataDir, 'events.json'));
 
+if (!feedsList.length || !eventsList.length) {
+  console.warn('Warning: feeds.json or events.json is empty!');
+}
+
 const FEED_COUNT = feedsList.length;
 const FRAME_INTERVAL_MS = 2000;
+const feedsState = feedsList.map(f => ({ id: f.id, lastAnomalyAt: 0 }));
 
+// --------------------
+// Helper: Create Frame Data URL
+// --------------------
 function makeFrameDataURL(feedId, anomaly=false, extraText='') {
   const ts = new Date().toLocaleTimeString();
   const color = anomaly ? '#ff0066' : '#33ffcc';
@@ -63,8 +82,9 @@ function makeFrameDataURL(feedId, anomaly=false, extraText='') {
   return `data:image/svg+xml;base64,${base64}`;
 }
 
-const feedsState = feedsList.map(f => ({ id: f.id, lastAnomalyAt: 0 }));
-
+// --------------------
+// Frame Emission
+// --------------------
 function startEmission() {
   setInterval(() => {
     const now = Date.now();
@@ -81,8 +101,8 @@ function startEmission() {
         anomaly,
         event: evt,
         meta: {
-          location: feedsList[feed.id-1].location,
-          note: anomaly ? evt.desc : 'normal'
+          location: feedsList[feed.id-1]?.location || 'Unknown',
+          note: anomaly ? evt?.desc : 'normal'
         }
       };
       io.emit('frame', frame);
@@ -90,21 +110,29 @@ function startEmission() {
   }, FRAME_INTERVAL_MS);
 }
 
+// --------------------
+// Socket.IO Connections
+// --------------------
 io.on('connection', (socket) => {
-  console.log('client connected', socket.id);
+  console.log('Client connected', socket.id);
   socket.emit('init', { feedCount: FEED_COUNT });
 
   socket.on('capture', (evidence) => {
-    console.log('capture received', evidence.feedId, 'note=', evidence.meta?.note);
+    console.log('Capture received', evidence.feedId, 'note=', evidence.meta?.note);
     socket.emit('captureAck', { ok: true, savedAt: Date.now() });
   });
 
   socket.on('disconnect', () => {
-    console.log('client disconnected', socket.id);
+    console.log('Client disconnected', socket.id);
   });
 });
 
-server.listen(config.PORT, () => {
-  console.log(`Echo Eyes backend listening on :${config.PORT} (USE_DB=${config.USE_DB})`);
+// --------------------
+// Start Server
+// --------------------
+const PORT = process.env.PORT || config.PORT || 5000;
+
+server.listen(PORT, () => {
+  console.log(`Echo Eyes backend listening on :${PORT} (USE_DB=${config.USE_DB})`);
   startEmission();
 });
